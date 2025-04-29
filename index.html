@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Health Diagnostics</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://docs.opencv.org/4.5.2/opencv.js" async onload="onOpenCvReady()"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-analytics.js"></script>
+  <style>
+    .glow-text {
+      text-shadow: 0 0 10px rgba(59, 130, 246, 0.8), 0 0 20px rgba(59, 130, 246, 0.6);
+    }
+    .card-shadow {
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    }
+    .hover-scale:hover {
+      transform: scale(1.05);
+      transition: transform 0.3s ease;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 font-sans text-gray-800">
+  <!-- Navigation -->
+  <nav class="bg-blue-900 text-white p-4 sticky top-0 z-10">
+    <div class="container mx-auto flex justify-between items-center">
+      <h1 class="text-2xl font-bold glow-text">Health Diagnostics</h1>
+      <div class="space-x-4">
+        <button onclick="showPage('user-info')" class="hover:underline glow-text">User Info</button>
+        <button onclick="showPage('jaundice')" class="hover:underline glow-text">Jaundice</button>
+        <button onclick="showPage('heart-rate')" class="hover:underline glow-text">Heart Rate</button>
+        <button onclick="showPage('anemia')" class="hover:underline glow-text">Anemia</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="container mx-auto p-6">
+    <!-- User Info Page -->
+    <div id="user-info" class="page">
+      <h2 class="text-3xl font-bold text-blue-900 mb-6 glow-text">Enter Your Information</h2>
+      <div class="bg-white p-6 rounded-lg card-shadow">
+        <form id="user-form">
+          <div class="mb-4">
+            <label class="block text-gray-700 glow-text">Username</label>
+            <input type="text" id="username" class="w-full p-2 border rounded" required>
+          </div>
+          <div class="mb-4">
+            <label class="block text-gray-700 glow-text">Name</label>
+            <input type="text" id="name" class="w-full p-2 border rounded" required>
+          </div>
+          <div class="mb-4">
+            <label class="block text-gray-700 glow-text">Age</label>
+            <input type="number" id="age" class="w-full p-2 border rounded" required>
+          </div>
+          <div class="mb-4">
+            <label class="block text-gray-700 glow-text">Date of Birth</label>
+            <input type="date" id="dob" class="w-full p-2 border rounded" required>
+          </div>
+          <div class="mb-4">
+            <label class="block text-gray-700 glow-text">Height (cm)</label>
+            <input type="number" id="height" class="w-full p-2 border rounded" required>
+          </div>
+          <div class="mb-4">
+            <label class="block text-gray-700 glow-text">Weight (kg)</label>
+            <input type="number" id="weight" class="w-full p-2 border rounded" required>
+          </div>
+          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 hover-scale glow-text">Submit</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Jaundice Detection Page -->
+    <div id="jaundice" class="page hidden">
+      <h2 class="text-3xl font-bold text-blue-900 mb-6 glow-text">Jaundice Detection</h2>
+      <div class="bg-white p-6 rounded-lg card-shadow">
+        <p class="mb-4 glow-text">Upload an image of your eye to check for jaundice.</p>
+        <input type="file" id="jaundice-image" accept="image/*" class="mb-4">
+        <button onclick="processJaundice()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 hover-scale glow-text">Analyze</button>
+        <p id="jaundice-result" class="mt-4 glow-text"></p>
+        <canvas id="jaundice-canvas" class="hidden"></canvas>
+      </div>
+    </div>
+
+    <!-- Heart Rate Measurement Page -->
+    <div id="heart-rate" class="page hidden">
+      <h2 class="text-3xl font-bold text-blue-900 mb-6 glow-text">Heart Rate Measurement</h2>
+      <div class="bg-white p-6 rounded-lg card-shadow">
+        <p class="mb-4 glow-text">Place your finger over the camera and click Start.</p>
+        <video id="video" width="640" height="480" autoplay class="mb-4"></video>
+        <canvas id="heart-rate-canvas" class="hidden"></canvas>
+        <button onclick="startHeartRate()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 hover-scale glow-text">Start</button>
+        <button onclick="stopHeartRate()" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 hover-scale glow-text hidden" id="stop-btn">Stop</button>
+        <p id="heart-rate-result" class="mt-4 glow-text"></p>
+      </div>
+    </div>
+
+    <!-- Anemia Detection Page -->
+    <div id="anemia" class="page hidden">
+      <h2 class="text-3xl font-bold text-blue-900 mb-6 glow-text">Anemia Detection</h2>
+      <div class="bg-white p-6 rounded-lg card-shadow">
+        <p class="mb-4 glow-text">Upload images of your eyelid and fingernail to check for anemia.</p>
+        <label class="block mb-2 glow-text">Eyelid Image</label>
+        <input type="file" id="eyelid-image" accept="image/*" class="mb-4">
+        <label class="block mb-2 glow-text">Fingernail Image</label>
+        <input type="file" id="nail-image" accept="image/*" class="mb-4">
+        <button onclick="processAnemia()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 hover-scale glow-text">Analyze</button>
+        <p id="anemia-result" class="mt-4 glow-text"></p>
+        <canvas id="anemia-canvas" class="hidden"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyCNW39WXuT2Oy3byyi_ppk_BIAhKdwmHuE",
+      authDomain: "makeathon-2eedb.firebaseapp.com",
+      databaseURL: "https://makeathon-2eedb-default-rtdb.firebaseio.com",
+      projectId: "makeathon-2eedb",
+      storageBucket: "makeathon-2eedb.firebasestorage.app",
+      messagingSenderId: "234509115969",
+      appId: "1:234509115969:web:dc86d6af3dcaf7dd525cc0",
+      measurementId: "G-5XP8R25MK2"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Page Navigation
+    function showPage(pageId) {
+      document.querySelectorAll('.page').forEach(page => page.classList.add('hidden'));
+      document.getElementById(pageId).classList.remove('hidden');
+    }
+
+    // User Info Form Submission
+    document.getElementById('user-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value;
+      const userData = {
+        name: document.getElementById('name').value,
+        age: parseInt(document.getElementById('age').value),
+        dob: document.getElementById('dob').value,
+        height: parseFloat(document.getElementById('height').value),
+        weight: parseFloat(document.getElementById('weight').value)
+      };
+      db.ref('users/' + username).set(userData)
+        .then(() => alert('User data saved successfully!'))
+        .catch(error => alert('Error saving data: ' + error.message));
+    });
+
+    // OpenCV Readiness
+    function onOpenCvReady() {
+      console.log('OpenCV.js is ready');
+    }
+
+    // Jaundice Detection
+    function processJaundice() {
+      const input = document.getElementById('jaundice-image');
+      if (!input.files[0]) {
+        alert('Please upload an image');
+        return;
+      }
+      const img = new Image();
+      img.src = URL.createObjectURL(input.files[0]);
+      img.onload = () => {
+        const canvas = document.getElementById('jaundice-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        const src = cv.imread(canvas);
+        
+        // Preprocessing
+        const hsv = new cv.Mat();
+        cv.cvtColor(src, hsv, cv.COLOR_RGB2HSV);
+        const low = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), [20, 100, 100, 0]);
+        const high = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), [30, 255, 255, 255]);
+        const mask = new cv.Mat();
+        cv.inRange(hsv, low, high, mask);
+        
+        // Calculate yellow percentage
+        const yellowPixels = cv.countNonZero(mask);
+        const totalPixels = mask.rows * mask.cols;
+        const yellowPercent = (yellowPixels / totalPixels) * 100;
+        
+        // Threshold-based diagnosis
+        let result = 'No jaundice detected';
+        if (yellowPercent > 5) result = 'Possible jaundice (Yellow: ' + yellowPercent.toFixed(2) + '%)';
+        if (yellowPercent > 10) result = 'High jaundice risk (Yellow: ' + yellowPercent.toFixed(2) + '%)';
+        
+        document.getElementById('jaundice-result').textContent = result;
+        
+        // Cleanup
+        src.delete();
+        hsv.delete();
+        low.delete();
+        high.delete();
+        mask.delete();
+      };
+    }
+
+    // Heart Rate Measurement
+    let stream = null;
+    let measuring = false;
+    let frames = [];
+    
+    function startHeartRate() {
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(s => {
+          stream = s;
+          const video = document.getElementById('video');
+          video.srcObject = stream;
+          document.getElementById('stop-btn').classList.remove('hidden');
+          measuring = true;
+          frames = [];
+          captureFrames();
+        })
+        .catch(err => alert('Error accessing camera: ' + err));
+    }
+
+    function captureFrames() {
+      if (!measuring) return;
+      const video = document.getElementById('video');
+      const canvas = document.getElementById('heart-rate-canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0);
+      const src = cv.imread(canvas);
+      
+      // Extract red channel mean
+      const channels = new cv.MatVector();
+      cv.split(src, channels);
+      const red = channels.get(0);
+      const mean = cv.mean(red)[0];
+      frames.push(mean);
+      
+      // Cleanup
+      src.delete();
+      channels.delete();
+      red.delete();
+      
+      if (frames.length < 900) { // ~30 seconds at 30fps
+        requestAnimationFrame(captureFrames);
+      } else {
+        stopHeartRate();
+        calculateHeartRate();
+      }
+    }
+
+    function stopHeartRate() {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+      }
+      measuring = false;
+      document.getElementById('stop-btn').classList.add('hidden');
+    }
+
+    function calculateHeartRate() {
+      // Simple peak detection on red channel means
+      const signal = frames;
+      const peaks = [];
+      for (let i = 1; i < signal.length - 1; i++) {
+        if (signal[i] > signal[i-1] && signal[i] > signal[i+1] && signal[i] > 128) {
+          peaks.push(i);
+        }
+      }
+      if (peaks.length < 2) {
+        document.getElementById('heart-rate-result').textContent = 'Unable to measure heart rate';
+        return;
+      }
+      const intervals = [];
+      for (let i = 1; i < peaks.length; i++) {
+        intervals.push((peaks[i] - peaks[i-1]) / 30); // Assuming 30fps
+      }
+      const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+      const bpm = Math.round(60 / avgInterval);
+      document.getElementById('heart-rate-result').textContent = `Heart Rate: ${bpm} BPM`;
+    }
+
+    // Anemia Detection
+    function processAnemia() {
+      const eyelidInput = document.getElementById('eyelid-image');
+      const nailInput = document.getElementById('nail-image');
+      if (!eyelidInput.files[0] || !nailInput.files[0]) {
+        alert('Please upload both images');
+        return;
+      }
+      
+      const processImage = (input, callback) => {
+        const img = new Image();
+        img.src = URL.createObjectURL(input.files[0]);
+        img.onload = () => {
+          const canvas = document.getElementById('anemia-canvas');
+          const ctx = canvas.getContext('2d');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+          const src = cv.imread(canvas);
+          
+          // Preprocessing
+          const blurred = new cv.Mat();
+          cv.GaussianBlur(src, blurred, { width: 5, height: 5 }, 0);
+          const channels = new cv.MatVector();
+          cv.split(blurred, channels);
+          const red = channels.get(0);
+          const meanRed = cv.mean(red)[0];
+          
+          // Cleanup
+          src.delete();
+          blurred.delete();
+          channels.delete();
+          red.delete();
+          
+          callback(meanRed);
+        };
+      };
+      
+      let eyelidRed, nailRed;
+      processImage(eyelidInput, (red) => {
+        eyelidRed = red;
+        processImage(nailInput, (red) => {
+          nailRed = red;
+          // Threshold-based diagnosis
+          const avgRed = (eyelidRed + nailRed) / 2;
+          let result = 'No anemia detected';
+          if (avgRed < 100) result = 'Possible anemia (Low redness)';
+          if (avgRed < 80) result = 'High anemia risk (Very low redness)';
+          document.getElementById('anemia-result').textContent = result;
+        });
+      });
+    }
+
+    // Initialize
+    showPage('user-info');
+  </script>
+</body>
+</html>
