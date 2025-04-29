@@ -6,9 +6,34 @@
   <title>Health Diagnostics</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://docs.opencv.org/4.5.2/opencv.js" async onload="onOpenCvReady()"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-analytics.js"></script>
+  <!-- Updated Firebase SDK scripts for modular SDK -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+    import { getAnalytics } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-analytics.js';
+    import { getDatabase, ref, set } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
+
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyCNW39WXuT2Oy3byyi_ppk_BIAhKdwmHuE",
+      authDomain: "makeathon-2eedb.firebaseapp.com",
+      databaseURL: "https://makeathon-2eedb-default-rtdb.firebaseio.com",
+      projectId: "makeathon-2eedb",
+      storageBucket: "makeathon-2eedb.firebasestorage.app",
+      messagingSenderId: "234509115969",
+      appId: "1:234509115969:web:dc86d6af3dcaf7dd525cc0",
+      measurementId: "G-5XP8R25MK2"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const db = getDatabase(app);
+
+    // Export db for use in other scripts
+    window.firebaseDb = db;
+    window.firebaseRef = ref;
+    window.firebaseSet = set;
+  </script>
   <style>
     .glow-text {
       text-shadow: 0 0 10px rgba(59, 130, 246, 0.8), 0 0 20px rgba(59, 130, 246, 0.6);
@@ -114,22 +139,6 @@
   </div>
 
   <script>
-    // Firebase Configuration
-    const firebaseConfig = {
-      apiKey: "AIzaSyCNW39WXuT2Oy3byyi_ppk_BIAhKdwmHuE",
-      authDomain: "makeathon-2eedb.firebaseapp.com",
-      databaseURL: "https://makeathon-2eedb-default-rtdb.firebaseio.com",
-      projectId: "makeathon-2eedb",
-      storageBucket: "makeathon-2eedb.firebasestorage.app",
-      messagingSenderId: "234509115969",
-      appId: "1:234509115969:web:dc86d6af3dcaf7dd525cc0",
-      measurementId: "G-5XP8R25MK2"
-    };
-
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
     // Page Navigation
     function showPage(pageId) {
       document.querySelectorAll('.page').forEach(page => page.classList.add('hidden'));
@@ -147,7 +156,7 @@
         height: parseFloat(document.getElementById('height').value),
         weight: parseFloat(document.getElementById('weight').value)
       };
-      db.ref('users/' + username).set(userData)
+      window.firebaseSet(window.firebaseRef(window.firebaseDb, 'users/' + username), userData)
         .then(() => alert('User data saved successfully!'))
         .catch(error => alert('Error saving data: ' + error.message));
     });
