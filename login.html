@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Health Diagnostics</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .bg-grid {
+      background-image: linear-gradient(to right, rgba(0, 0, 0, 0.1) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(0, 0, 0, 0.1) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+  </style>
+</head>
+<body class="bg-white bg-grid min-h-screen flex items-center justify-center">
+  <div class="container mx-auto flex flex-col md:flex-row items-center">
+    <!-- Left Side: Login Section -->
+    <div class="md:w-1/2 p-8">
+      <h1 class="text-5xl font-bold mb-4">Healthy Body Starts Here</h1>
+      <p class="text-gray-600 mb-8">With a complete regimen made using the expertise of doctors and the power of AI</p>
+      <form id="login-form">
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-bold mb-2" for="email">Email</label>
+          <input type="email" id="email" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="Enter your email" required>
+        </div>
+        <div class="mb-6">
+          <label class="block text-gray-700 text-sm font-bold mb-2" for="password">Password</label>
+          <input type="password" id="password" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="Enter your password" required>
+        </div>
+        <button type="submit" class="bg-teal-600 text-white px-6 py-3 rounded-lg hover:bg-teal-700 flex items-center">
+          Login <span class="ml-2">➔</span>
+        </button>
+      </form>
+    </div>
+    <!-- Right Side: Image -->
+    <div class="md:w-1/2 p-8">
+        <img src="https://i.postimg.cc/cLQ2b9pk/temp-Imagedr-UWff.avif" alt="Facial scan" class="rounded-full w-full max-w-md mx-auto">
+    </div>
+  </div>
+
+  <script>
+    // Login Form Submission
+    document.getElementById('login-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      console.log('Login form submitted');
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      console.log('Email:', email, 'Password:', password);
+
+      const validEmail = "user1.com";
+      const validPassword = "12345";
+      if (email === validEmail && password === validPassword) {
+        console.log('Login successful');
+        window.location.href = 'index.html';
+      } else {
+        alert('Invalid email or password');
+        console.log('Login failed');
+      }
+    });
+  </script>
+</body>
+</html>
